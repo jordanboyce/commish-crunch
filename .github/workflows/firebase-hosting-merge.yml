@@ -1,4 +1,3 @@
-# .github/workflows/firebase-hosting.yml
 name: Deploy to Firebase Hosting on merge
 
 on:
@@ -11,28 +10,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # 1. Set up Node.js with caching for pnpm
-      - uses: actions/setup-node@v4
+      # 1. Set up Node.js (must be done before pnpm setup)
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
 
-      # 2. Set up pnpm
-      - uses: pnpm/action-setup@v4
+      # 2. Install pnpm (official setup action)
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 9   # or omit if your package.json has "packageManager"
+          version: 10.9.0
+          run_install: false
 
-      # 3. Install dependencies
+      # 3. Verify pnpm installation
+      - name: Verify pnpm installation
+        run: pnpm --version
+
+      # 4. Install dependencies
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 4. Build your project
+      # 5. Build the project
       - name: Build project
         run: pnpm build
 
-      # 5. Deploy to Firebase Hosting
+      # 6. Deploy to Firebase Hosting
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

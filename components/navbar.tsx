@@ -90,10 +90,10 @@ export default function Navbar() {
 
           {/* Calculator Dropdown */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+            {/* <div className="flex items-center gap-2 text-sm text-gray-600">
               <CurrentIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Calculator:</span>
-            </div>
+            </div> */}
             <Select value={currentCalculator} onValueChange={handleCalculatorChange}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Select Calculator" />

@@ -30,9 +30,9 @@ export default function HomePage() {
       id: 'lighting',
       name: 'Permanent Lighting',
       icon: Lightbulb,
-      available: false,
-      description: 'Calculate commissions for permanent outdoor lighting sold by linear foot with tiered pricing and installation bonuses.',
-      features: ['Price per linear foot', 'Tiered commission rates', 'Installation bonuses', 'Coming soon']
+      available: true,
+      description: 'Calculate permanent lighting commissions using the linear foot redline model. Earn percentage of profit above company minimum price per foot.',
+      features: ['Redline commission model', 'Price per linear foot', 'Volume bonuses', 'Sales tracking & export']
     },
     {
       id: 'pest',

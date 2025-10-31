@@ -16,7 +16,7 @@ jobs:
       # 1. Set up Node.js with caching for pnpm
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       # 2. Set up pnpm

@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "commishcrunch",
     "public": "out",
     "ignore": [
       "firebase.json",

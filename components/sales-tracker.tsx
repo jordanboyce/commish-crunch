@@ -82,7 +82,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
         notes: formData.notes,
         industryData: {
           systemSize: parseFloat(formData.systemSize),
-          pricePerKw: parseFloat(formData.saleAmount) / parseFloat(formData.systemSize)
+          pricePerWatt: parseFloat(formData.saleAmount) / (parseFloat(formData.systemSize) * 1000)
         }
       };
 
@@ -268,7 +268,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                           <p className="text-sm text-gray-600">
                             {sale.industryData?.systemSize ? `${sale.industryData.systemSize} kW • ` : ''}
                             {formatCurrency(sale.saleAmount)}
-                            {sale.industryData?.pricePerKw ? ` • $${sale.industryData.pricePerKw.toFixed(2)}/kW` : ''}
+                            {sale.industryData?.pricePerWatt ? ` • $${sale.industryData.pricePerWatt.toFixed(2)}/W` : ''}
                           </p>
                           <p className="text-sm text-gray-600">
                             Created: {formatDate(sale.dateCreated)}

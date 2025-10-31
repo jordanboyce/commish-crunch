@@ -22,10 +22,10 @@ interface CommissionBreakdown {
 export default function SimpleSolarCalculator() {
     const [systemSize, setSystemSize] = useState('');
     const [customerName, setCustomerName] = useState('');
+    const [pricePerWatt, setPricePerWatt] = useState('3.20'); // Per-sale variable
 
-    // Company settings with localStorage persistence
-    const [pricePerKw, setPricePerKw] = useState(3.20);
-    const [baseRate, setBaseRate] = useState(3.5);
+    // Company settings with localStorage persistence  
+    const [baseRate, setBaseRate] = useState(50); // 50% split
     const [redlinePrice, setRedlinePrice] = useState(2.80);
 
 
@@ -53,8 +53,7 @@ export default function SimpleSolarCalculator() {
             try {
                 const savedSettings = await settingsDB.getSettings('solar');
                 if (savedSettings) {
-                    setPricePerKw(savedSettings.pricePerKw || 3.20);
-                    setBaseRate(savedSettings.baseRate || 3.5);
+                    setBaseRate(savedSettings.baseRate || 50);
                     setRedlinePrice(savedSettings.redlinePrice || 2.80);
                     setHasVolumeBonus(savedSettings.hasVolumeBonus || false);
                     setVolumeThreshold(savedSettings.volumeThreshold || 10);
@@ -74,7 +73,6 @@ export default function SimpleSolarCalculator() {
     useEffect(() => {
         const saveSettings = async () => {
             const settings = {
-                pricePerKw,
                 baseRate,
                 redlinePrice,
                 hasVolumeBonus,
@@ -91,25 +89,54 @@ export default function SimpleSolarCalculator() {
             }
         };
         saveSettings();
-    }, [pricePerKw, baseRate, redlinePrice, hasVolumeBonus, volumeThreshold, volumeBonusRate, isSharedCommission, sharedPercentage, sharingReason]);
+    }, [baseRate, redlinePrice, hasVolumeBonus, volumeThreshold, volumeBonusRate, isSharedCommission, sharedPercentage, sharingReason]);
 
     const calculateCommission = async () => {
         const size = parseFloat(systemSize);
 
         if (!size) return;
 
-        const saleAmount = size * pricePerKw;
+        const sizeInWatts = size * 1000; // Convert kW to watts
+        const pricePerWattNum = parseFloat(pricePerWatt);
+        const saleAmount = sizeInWatts * pricePerWattNum;
         const breakdown: CommissionBreakdown[] = [];
 
-        // Base commission
-        const baseCommission = saleAmount * (baseRate / 100);
+        // Check if sale is above redline
+        if (pricePerWattNum <= redlinePrice) {
+            breakdown.push({
+                label: 'Below Redline - No Commission',
+                amount: 0,
+                type: 'penalty'
+            });
+
+            setResult({
+                totalCommission: 0,
+                breakdown,
+                pricePerKw: pricePerWattNum,
+                saleAmount,
+                grossCommission: 0
+            });
+            return;
+        }
+
+        // Calculate commission on amount above redline
+        const redlineAmount = sizeInWatts * redlinePrice;
+        const aboveRedlineAmount = saleAmount - redlineAmount;
+        const commission = aboveRedlineAmount * (baseRate / 100);
+
         breakdown.push({
-            label: 'Base Commission',
-            amount: baseCommission,
+            label: `Redline Amount (${size} kW × $${redlinePrice.toFixed(2)}/W)`,
+            amount: redlineAmount,
             type: 'base'
         });
 
-        let totalCommission = baseCommission;
+        breakdown.push({
+            label: `Above Redline (${baseRate}% of $${aboveRedlineAmount.toFixed(0)})`,
+            amount: commission,
+            type: 'bonus'
+        });
+
+        let totalCommission = commission;
 
         // Volume bonus check
         if (hasVolumeBonus) {
@@ -126,7 +153,7 @@ export default function SimpleSolarCalculator() {
                 });
 
                 if (thisMonthSales.length >= volumeThreshold) {
-                    const volumeBonus = saleAmount * (volumeBonusRate / 100);
+                    const volumeBonus = commission * (volumeBonusRate / 100);
                     breakdown.push({
                         label: `Volume Bonus (${thisMonthSales.length}/${volumeThreshold} sales)`,
                         amount: volumeBonus,
@@ -141,16 +168,7 @@ export default function SimpleSolarCalculator() {
 
 
 
-        // Redline penalty
-        if (pricePerKw < redlinePrice) {
-            const penalty = totalCommission * 0.5;
-            breakdown.push({
-                label: 'Below Redline Penalty',
-                amount: penalty,
-                type: 'penalty'
-            });
-            totalCommission -= penalty;
-        }
+
 
 
 
@@ -169,7 +187,7 @@ export default function SimpleSolarCalculator() {
         setResult({
             totalCommission: Math.max(0, finalCommission),
             breakdown,
-            pricePerKw,
+            pricePerKw: pricePerWattNum,
             saleAmount,
             grossCommission: totalCommission
         });
@@ -188,7 +206,7 @@ export default function SimpleSolarCalculator() {
                 notes: `Commission breakdown: ${result.breakdown.map(b => `${b.label}: ${formatCurrency(b.amount)}`).join(', ')}`,
                 industryData: {
                     systemSize: parseFloat(systemSize),
-                    pricePerKw: result.pricePerKw,
+                    pricePerWatt: parseFloat(pricePerWatt),
                     baseRate,
                     redlinePrice,
                     hasVolumeBonus,
@@ -202,6 +220,7 @@ export default function SimpleSolarCalculator() {
             // Reset form
             setSystemSize('');
             setCustomerName('');
+            setPricePerWatt('3.20');
             setResult(null);
 
             alert('Sale saved successfully!');
@@ -219,7 +238,8 @@ export default function SimpleSolarCalculator() {
     };
 
     const getPriceStatus = () => {
-        if (pricePerKw < redlinePrice) return { color: 'red', text: 'Below Redline' };
+        const pricePerWattNum = parseFloat(pricePerWatt);
+        if (pricePerWattNum < redlinePrice) return { color: 'red', text: 'Below Redline' };
         return { color: 'green', text: 'Good Price' };
     };
 
@@ -285,9 +305,9 @@ export default function SimpleSolarCalculator() {
             // Import settings
             if (importData.settings) {
                 await settingsDB.saveSettings('solar', importData.settings);
-                
+
                 // Update current state with imported settings
-                setPricePerKw(importData.settings.pricePerKw || pricePerKw);
+                // Note: pricePerWatt is now per-sale, not a setting
                 setBaseRate(importData.settings.baseRate || baseRate);
                 setRedlinePrice(importData.settings.redlinePrice || redlinePrice);
                 setHasVolumeBonus(importData.settings.hasVolumeBonus || hasVolumeBonus);
@@ -315,7 +335,7 @@ export default function SimpleSolarCalculator() {
             }
 
             alert(`Import successful!\nImported ${Object.keys(importData.settings || {}).length} settings and ${(importData.sales || []).length} sales records.`);
-            
+
             // Reset file input
             event.target.value = '';
         } catch (error) {
@@ -366,7 +386,7 @@ export default function SimpleSolarCalculator() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="customerName">Customer Name (Optional)</Label>
                                     <Input
@@ -383,25 +403,37 @@ export default function SimpleSolarCalculator() {
                                         id="systemSize"
                                         type="number"
                                         step="0.1"
-                                        placeholder="8.5"
+                                        placeholder="12"
                                         value={systemSize}
                                         onChange={(e) => setSystemSize(e.target.value)}
+                                        className="text-lg"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="pricePerWatt">Price per Watt ($)</Label>
+                                    <Input
+                                        id="pricePerWatt"
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="3.20"
+                                        value={pricePerWatt}
+                                        onChange={(e) => setPricePerWatt(e.target.value)}
                                         className="text-lg"
                                     />
                                 </div>
                             </div>
 
                             {/* System info display */}
-                            {systemSize && (
+                            {systemSize && pricePerWatt && (
                                 <div className="p-4 bg-gray-50 rounded-lg space-y-2">
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">System Size:</span>
-                                        <span className="font-medium">{systemSize} kW</span>
+                                        <span className="font-medium">{systemSize} kW ({parseFloat(systemSize) * 1000} watts)</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">Price per kW:</span>
+                                        <span className="text-sm text-gray-600">Price per Watt:</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-medium">${pricePerKw.toFixed(2)}</span>
+                                            <span className="font-medium">${parseFloat(pricePerWatt).toFixed(2)}</span>
                                             <Badge variant={
                                                 getPriceStatus().color === 'green' ? 'default' :
                                                     getPriceStatus().color === 'red' ? 'destructive' : 'secondary'
@@ -412,7 +444,7 @@ export default function SimpleSolarCalculator() {
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">Total Sale Amount:</span>
-                                        <span className="font-medium">{formatCurrency(parseFloat(systemSize) * pricePerKw)}</span>
+                                        <span className="font-medium">{formatCurrency(parseFloat(systemSize) * 1000 * parseFloat(pricePerWatt))}</span>
                                     </div>
                                 </div>
                             )}
@@ -423,7 +455,7 @@ export default function SimpleSolarCalculator() {
                                 <Button
                                     onClick={calculateCommission}
                                     className="flex-1"
-                                    disabled={!systemSize}
+                                    disabled={!systemSize || !pricePerWatt}
                                 >
                                     Calculate Commission
                                 </Button>
@@ -476,7 +508,7 @@ export default function SimpleSolarCalculator() {
                                         <span className="font-medium">{formatCurrency(result.saleAmount)}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-gray-600">Price per kW:</span>
+                                        <span className="text-gray-600">Price per Watt:</span>
                                         <span className="font-medium">${result.pricePerKw.toFixed(2)}</span>
                                     </div>
                                 </div>
@@ -528,27 +560,22 @@ export default function SimpleSolarCalculator() {
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="pricePerKw">Price per kW ($)</Label>
-                                    <Input
-                                        id="pricePerKw"
-                                        type="number"
-                                        step="0.01"
-                                        value={pricePerKw}
-                                        onChange={(e) => setPricePerKw(parseFloat(e.target.value) || 0)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="baseRate">Base Commission Rate (%)</Label>
+                                    <Label htmlFor="baseRate">Commission Split (%)</Label>
                                     <Input
                                         id="baseRate"
                                         type="number"
-                                        step="0.1"
+                                        step="1"
+                                        min="0"
+                                        max="100"
                                         value={baseRate}
                                         onChange={(e) => setBaseRate(parseFloat(e.target.value) || 0)}
                                     />
+                                    <p className="text-xs text-gray-500">
+                                        Your percentage of profit above redline (50% = 50/50 split)
+                                    </p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="redlinePrice">Redline Price ($/kW)</Label>
+                                    <Label htmlFor="redlinePrice">Redline Price ($/W)</Label>
                                     <Input
                                         id="redlinePrice"
                                         type="number"
@@ -557,7 +584,7 @@ export default function SimpleSolarCalculator() {
                                         onChange={(e) => setRedlinePrice(parseFloat(e.target.value) || 0)}
                                     />
                                     <p className="text-xs text-gray-500">
-                                        Minimum acceptable price per kW. Sales below this get a commission penalty.
+                                        Company's minimum price per watt. You earn commission only on amount above this.
                                     </p>
                                 </div>
 
@@ -701,7 +728,7 @@ export default function SimpleSolarCalculator() {
                                         Saves all your settings and sales to a file
                                     </p>
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                     <div className="relative">
                                         <Input
@@ -725,7 +752,7 @@ export default function SimpleSolarCalculator() {
                             </div>
 
                             <div className="p-3 bg-gray-50 rounded text-xs text-gray-600">
-                                <strong>How it works:</strong> Export creates a file you can save anywhere. 
+                                <strong>How it works:</strong> Export creates a file you can save anywhere.
                                 Import loads that file on any device. Your existing data stays safe - we only add the imported data.
                             </div>
                         </CardContent>

@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,13 +12,9 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-interface NavbarProps {
-  currentCalculator?: string;
-  onCalculatorChange?: (calculator: string) => void;
-  onHomeClick?: () => void;
-}
-
-export default function Navbar({ currentCalculator = 'solar', onCalculatorChange, onHomeClick }: NavbarProps) {
+export default function Navbar() {
+  const pathname = usePathname();
+  const router = useRouter();
   const calculators = [
     {
       id: 'solar',
@@ -42,14 +39,27 @@ export default function Navbar({ currentCalculator = 'solar', onCalculatorChange
     }
   ];
 
+  // Determine current calculator from pathname
+  const getCurrentCalculator = () => {
+    if (pathname === '/solar') return 'solar';
+    if (pathname === '/lighting') return 'lighting';
+    if (pathname === '/pest') return 'pest';
+    return 'home';
+  };
+
+  const currentCalculator = getCurrentCalculator();
   const currentCalc = calculators.find(calc => calc.id === currentCalculator);
   const CurrentIcon = currentCalc?.icon || Calculator;
 
   const handleCalculatorChange = (calculatorId: string) => {
     const calc = calculators.find(c => c.id === calculatorId);
-    if (calc?.available && onCalculatorChange) {
-      onCalculatorChange(calculatorId);
+    if (calc?.available) {
+      router.push(`/${calculatorId}`);
     }
+  };
+
+  const handleHomeClick = () => {
+    router.push('/');
   };
 
   return (
@@ -59,7 +69,7 @@ export default function Navbar({ currentCalculator = 'solar', onCalculatorChange
           {/* Logo/Brand */}
           <div 
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={onHomeClick}
+            onClick={handleHomeClick}
           >
             <Calculator className="h-8 w-8 text-gray-700" />
             <div>
@@ -74,7 +84,7 @@ export default function Navbar({ currentCalculator = 'solar', onCalculatorChange
               <CurrentIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Calculator:</span>
             </div>
-            <Select value={currentCalculator} onValueChange={handleCalculatorChange}>
+            <Select value={currentCalculator === 'home' ? 'solar' : currentCalculator} onValueChange={handleCalculatorChange}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>

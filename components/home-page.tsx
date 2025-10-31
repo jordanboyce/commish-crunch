@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,11 +15,8 @@ import {
   Clock
 } from 'lucide-react';
 
-interface HomePageProps {
-  onCalculatorSelect: (calculator: string) => void;
-}
-
-export default function HomePage({ onCalculatorSelect }: HomePageProps) {
+export default function HomePage() {
+  const router = useRouter();
   const calculators = [
     {
       id: 'solar',
@@ -93,7 +91,7 @@ export default function HomePage({ onCalculatorSelect }: HomePageProps) {
                 ? 'hover:shadow-lg hover:scale-105 cursor-pointer border-2 hover:border-gray-300'
                 : 'opacity-60'
                 }`}
-              onClick={() => calc.available && onCalculatorSelect(calc.id)}
+              onClick={() => calc.available && router.push(`/${calc.id}`)}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -123,7 +121,7 @@ export default function HomePage({ onCalculatorSelect }: HomePageProps) {
                   disabled={!calc.available}
                   onClick={(e) => {
                     e.stopPropagation();
-                    calc.available && onCalculatorSelect(calc.id);
+                    calc.available && router.push(`/${calc.id}`);
                   }}
                 >
                   {calc.available ? 'Launch Calculator' : 'Coming Soon'}

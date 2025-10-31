@@ -31,6 +31,8 @@ export const metadata: Metadata = {
   },
 };
 
+import Navbar from "@/components/navbar";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,7 +43,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50">
+          <Navbar />
+          <div className="container mx-auto px-4 py-6">
+            {children}
+          </div>
+        </div>
       </body>
     </html>
   );

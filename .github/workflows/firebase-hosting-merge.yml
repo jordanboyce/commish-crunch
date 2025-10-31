@@ -13,31 +13,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 1. Set up Node.js (must be done before pnpm setup)
+      # 1. Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
+          cache: 'npm'
 
-      # 2. Install pnpm (official setup action)
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.9.0
-          run_install: false
-
-      # 3. Verify pnpm installation
-      - name: Verify pnpm installation
-        run: pnpm --version
-
-      # 4. Install dependencies
+      # 2. Install dependencies
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
-      # 5. Build the project
+      # 3. Build the project
       - name: Build project
-        run: pnpm build
+        run: npm run build
 
       # 6. Deploy to Firebase Hosting
       - name: Deploy to Firebase Hosting

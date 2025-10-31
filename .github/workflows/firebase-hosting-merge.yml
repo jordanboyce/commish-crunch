@@ -13,28 +13,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Set up Node.js (and enable caching)
+      # 1. Set up Node.js with caching for pnpm
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: 'pnpm'
 
-      # ✅ Install pnpm properly (this is the missing piece)
-      - name: Install pnpm
-        run: corepack enable
+      # 2. Set up pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9   # or omit if your package.json has "packageManager"
 
-      # ✅ Verify pnpm works
-      - run: pnpm --version
-
-      # Install dependencies
+      # 3. Install dependencies
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Build your app
+      # 4. Build your project
       - name: Build project
         run: pnpm build
 
-      # Deploy to Firebase Hosting
+      # 5. Deploy to Firebase Hosting
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

@@ -41,7 +41,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
   // Form state for adding/editing sales
   const [formData, setFormData] = useState({
     customerName: '',
-    systemSize: '',
+    systemSize: '', // For solar: kW, for lighting: linear feet
     saleAmount: '',
     commission: '',
     status: 'pending' as SaleRecord['status'],
@@ -80,9 +80,14 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
         commission: parseFloat(formData.commission),
         status: formData.status,
         notes: formData.notes,
-        industryData: {
+        industryData: industry === 'solar' ? {
           systemSize: parseFloat(formData.systemSize),
           pricePerWatt: parseFloat(formData.saleAmount) / (parseFloat(formData.systemSize) * 1000)
+        } : industry === 'lighting' ? {
+          linearFeet: parseFloat(formData.systemSize),
+          pricePerFoot: parseFloat(formData.saleAmount) / parseFloat(formData.systemSize)
+        } : {
+          systemSize: parseFloat(formData.systemSize)
         }
       };
 
@@ -115,7 +120,9 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
     setEditingSale(sale);
     setFormData({
       customerName: sale.customerName,
-      systemSize: sale.industryData?.systemSize?.toString() || '',
+      systemSize: (industry === 'solar' ? sale.industryData?.systemSize?.toString() : 
+                   industry === 'lighting' ? sale.industryData?.linearFeet?.toString() : 
+                   sale.industryData?.systemSize?.toString()) || '',
       saleAmount: sale.saleAmount.toString(),
       commission: sale.commission.toString(),
       status: sale.status,
@@ -251,7 +258,9 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
           <Card>
             <CardHeader>
               <CardTitle>Sales History</CardTitle>
-              <CardDescription>Track and manage your solar sales</CardDescription>
+              <CardDescription>
+                Track and manage your {industry === 'solar' ? 'solar' : industry === 'lighting' ? 'permanent lighting' : industry} sales
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -266,9 +275,11 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                         <div>
                           <h3 className="font-semibold">{sale.customerName}</h3>
                           <p className="text-sm text-gray-600">
-                            {sale.industryData?.systemSize ? `${sale.industryData.systemSize} kW • ` : ''}
+                            {industry === 'solar' && sale.industryData?.systemSize ? `${sale.industryData.systemSize} kW • ` : ''}
+                            {industry === 'lighting' && sale.industryData?.linearFeet ? `${sale.industryData.linearFeet} ft • ` : ''}
                             {formatCurrency(sale.saleAmount)}
-                            {sale.industryData?.pricePerWatt ? ` • $${sale.industryData.pricePerWatt.toFixed(2)}/W` : ''}
+                            {industry === 'solar' && sale.industryData?.pricePerWatt ? ` • $${sale.industryData.pricePerWatt.toFixed(2)}/W` : ''}
+                            {industry === 'lighting' && sale.industryData?.pricePerFoot ? ` • $${sale.industryData.pricePerFoot.toFixed(2)}/ft` : ''}
                           </p>
                           <p className="text-sm text-gray-600">
                             Created: {formatDate(sale.dateCreated)}
@@ -341,7 +352,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                 {editingSale ? 'Edit Sale' : 'Add New Sale'}
               </CardTitle>
               <CardDescription>
-                {editingSale ? 'Update sale information' : 'Record a new solar sale'}
+                {editingSale ? 'Update sale information' : `Record a new ${industry === 'solar' ? 'solar' : industry === 'lighting' ? 'permanent lighting' : industry} sale`}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -357,12 +368,15 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="systemSize">System Size (kW)</Label>
+                  <Label htmlFor="systemSize">
+                    {industry === 'solar' ? 'System Size (kW)' : 
+                     industry === 'lighting' ? 'Linear Feet' : 'System Size'}
+                  </Label>
                   <Input
                     id="systemSize"
                     type="number"
-                    step="0.1"
-                    placeholder="8.5"
+                    step={industry === 'solar' ? "0.1" : "1"}
+                    placeholder={industry === 'solar' ? "8.5" : industry === 'lighting' ? "200" : "8.5"}
                     value={formData.systemSize}
                     onChange={(e) => setFormData(prev => ({ ...prev, systemSize: e.target.value }))}
                   />

@@ -3,10 +3,10 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Sun, 
-  Lightbulb, 
-  Bug, 
+import {
+  Sun,
+  Lightbulb,
+  Bug,
   Calculator
 } from 'lucide-react';
 
@@ -32,7 +32,7 @@ export default function Navbar() {
       id: 'lighting',
       name: 'Permanent Lighting',
       icon: Lightbulb,
-      available: false,
+      available: true,
       description: 'Linear foot pricing commission calculator'
     },
     {
@@ -53,9 +53,7 @@ export default function Navbar() {
   };
 
   const currentCalculator = getCurrentCalculator();
-  const currentCalc = calculators.find(calc => calc.id === currentCalculator);
-  const CurrentIcon = currentCalc?.icon || Calculator;
-  
+
   console.log('Current pathname:', pathname);
   console.log('Current calculator:', currentCalculator);
 
@@ -77,13 +75,13 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
-          <div 
+          <div
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={handleHomeClick}
           >
             <Calculator className="h-8 w-8 text-gray-700" />
             <div>
-              <h1 className="text-xl font-bold text-gray-900">CommishCrunch</h1>
+              <h1 className="text-xl font-bold text-gray-900 hidden sm:block">CommishCrunch</h1>
               <p className="text-xs text-gray-500 hidden sm:block">No-BS commission calculators for sales pros</p>
             </div>
           </div>
@@ -95,7 +93,7 @@ export default function Navbar() {
               <span className="hidden sm:inline">Calculator:</span>
             </div> */}
             <Select value={currentCalculator} onValueChange={handleCalculatorChange}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-50">
                 <SelectValue placeholder="Select Calculator" />
               </SelectTrigger>
               <SelectContent>
@@ -103,8 +101,8 @@ export default function Navbar() {
                   const IconComponent = calc.icon;
                   console.log('SelectItem value:', calc.id, 'name:', calc.name);
                   return (
-                    <SelectItem 
-                      key={calc.id} 
+                    <SelectItem
+                      key={calc.id}
                       value={calc.id}
                       className="flex items-center gap-2"
                     >

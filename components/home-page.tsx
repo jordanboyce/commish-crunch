@@ -23,8 +23,8 @@ export default function HomePage() {
       name: 'Solar Sales',
       icon: Sun,
       available: true,
-      description: 'Calculate solar panel installation commissions with pricing tiers, volume bonuses, and commission sharing.',
-      features: ['Price per kW calculations', 'Redline penalties', 'Volume bonuses', 'Sales tracking']
+      description: 'Calculate solar commissions using the industry-standard redline model. Earn percentage of profit above company minimum price per watt.',
+      features: ['Redline commission model', 'Price per watt pricing', 'Volume bonuses', 'Sales tracking & export']
     },
     {
       id: 'lighting',

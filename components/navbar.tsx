@@ -1,21 +1,26 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Sun, 
   Lightbulb, 
   Bug, 
-  Calculator,
-  ChevronDown
+  Calculator
 } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const calculators = [
+    {
+      id: 'home',
+      name: 'Home',
+      icon: Calculator,
+      available: true,
+      description: 'Calculator selection page'
+    },
     {
       id: 'solar',
       name: 'Solar Sales',
@@ -41,19 +46,24 @@ export default function Navbar() {
 
   // Determine current calculator from pathname
   const getCurrentCalculator = () => {
-    if (pathname === '/solar') return 'solar';
-    if (pathname === '/lighting') return 'lighting';
-    if (pathname === '/pest') return 'pest';
+    if (pathname === '/solar' || pathname === '/solar/') return 'solar';
+    if (pathname === '/lighting' || pathname === '/lighting/') return 'lighting';
+    if (pathname === '/pest' || pathname === '/pest/') return 'pest';
     return 'home';
   };
 
   const currentCalculator = getCurrentCalculator();
   const currentCalc = calculators.find(calc => calc.id === currentCalculator);
   const CurrentIcon = currentCalc?.icon || Calculator;
+  
+  console.log('Current pathname:', pathname);
+  console.log('Current calculator:', currentCalculator);
 
   const handleCalculatorChange = (calculatorId: string) => {
-    const calc = calculators.find(c => c.id === calculatorId);
-    if (calc?.available) {
+    console.log('Navigating to:', calculatorId); // Debug log
+    if (calculatorId === 'home') {
+      router.push('/');
+    } else {
       router.push(`/${calculatorId}`);
     }
   };
@@ -84,18 +94,18 @@ export default function Navbar() {
               <CurrentIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Calculator:</span>
             </div>
-            <Select value={currentCalculator === 'home' ? 'solar' : currentCalculator} onValueChange={handleCalculatorChange}>
+            <Select value={currentCalculator} onValueChange={handleCalculatorChange}>
               <SelectTrigger className="w-48">
-                <SelectValue />
+                <SelectValue placeholder="Select Calculator" />
               </SelectTrigger>
               <SelectContent>
                 {calculators.map((calc) => {
                   const IconComponent = calc.icon;
+                  console.log('SelectItem value:', calc.id, 'name:', calc.name);
                   return (
                     <SelectItem 
                       key={calc.id} 
                       value={calc.id}
-                      disabled={!calc.available}
                       className="flex items-center gap-2"
                     >
                       <div className="flex items-center gap-2 w-full">

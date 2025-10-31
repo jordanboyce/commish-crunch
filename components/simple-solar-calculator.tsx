@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Sun, Calculator, DollarSign, Settings, History, Save, Download, Upload } from 'lucide-react';
+import { Sun, Calculator, DollarSign, Settings, History, Save, Download, Upload, X, RotateCcw } from 'lucide-react';
 import SalesTracker from './sales-tracker';
 import { salesDB, SaleRecord } from '@/lib/sales-db';
 import { settingsDB } from '@/lib/settings-db';
@@ -23,6 +23,7 @@ export default function SimpleSolarCalculator() {
     const [systemSize, setSystemSize] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [pricePerWatt, setPricePerWatt] = useState('3.20'); // Per-sale variable
+    const [showSettingsReminder, setShowSettingsReminder] = useState(false);
 
     // Company settings with localStorage persistence  
     const [baseRate, setBaseRate] = useState(50); // 50% split
@@ -61,6 +62,13 @@ export default function SimpleSolarCalculator() {
                     setIsSharedCommission(savedSettings.isSharedCommission || false);
                     setSharedPercentage(savedSettings.sharedPercentage || 50);
                     setSharingReason(savedSettings.sharingReason || 'Split with partner');
+                }
+
+                // Check if settings reminder should be shown
+                // Check if settings reminder was dismissed
+                const reminderDismissed = localStorage.getItem('solarSettingsReminderDismissed');
+                if (!reminderDismissed) {
+                    setShowSettingsReminder(true);
                 }
             } catch (error) {
                 console.error('Error loading saved settings:', error);
@@ -243,6 +251,54 @@ export default function SimpleSolarCalculator() {
         return { color: 'green', text: 'Good Price' };
     };
 
+    const dismissSettingsReminder = () => {
+        setShowSettingsReminder(false);
+        localStorage.setItem('solarSettingsReminderDismissed', 'true');
+    };
+
+    const resetToDefaults = async () => {
+        const confirmReset = confirm(
+            'Reset all settings to default values?\n\n' +
+            'This will restore:\n' +
+            '• Commission Split: 50%\n' +
+            '• Redline Price: $2.80/W\n' +
+            '• Volume Bonus: Disabled\n' +
+            '• Commission Sharing: Disabled\n\n' +
+            'Your sales history will not be affected.'
+        );
+
+        if (confirmReset) {
+            try {
+                // Reset all settings to defaults
+                setBaseRate(50);
+                setRedlinePrice(2.80);
+                setHasVolumeBonus(false);
+                setVolumeThreshold(10);
+                setVolumeBonusRate(0.5);
+                setIsSharedCommission(false);
+                setSharedPercentage(50);
+                setSharingReason('Split with partner');
+
+                // Clear settings from IndexedDB (will be re-saved with defaults)
+                await settingsDB.saveSettings('solar', {
+                    baseRate: 50,
+                    redlinePrice: 2.80,
+                    hasVolumeBonus: false,
+                    volumeThreshold: 10,
+                    volumeBonusRate: 0.5,
+                    isSharedCommission: false,
+                    sharedPercentage: 50,
+                    sharingReason: 'Split with partner'
+                });
+
+                alert('Settings reset to default values successfully!');
+            } catch (error) {
+                console.error('Error resetting settings:', error);
+                alert('Error resetting settings. Please try again.');
+            }
+        }
+    };
+
     const handleExportData = async () => {
         try {
             // Get all solar settings and sales
@@ -372,7 +428,31 @@ export default function SimpleSolarCalculator() {
                 </TabsList>
 
                 <TabsContent value="calculator" className="space-y-6">
-
+                    {/* Settings Reminder */}
+                    {showSettingsReminder && (
+                        <Card className="bg-blue-50 border-blue-200">
+                            <CardContent className="p-4">
+                                <div className="flex items-start gap-3">
+                                    <Settings className="h-5 w-5 text-blue-600 mt-0.5" />
+                                    <div className="flex-1">
+                                        <h4 className="font-medium text-blue-900 mb-1">First time using this calculator?</h4>
+                                        <p className="text-sm text-blue-800">
+                                            Make sure to check the <strong>Settings tab</strong> to configure your company's redline price and commission split.
+                                            These numbers affect your commission calculation.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={dismissSettingsReminder}
+                                        className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Input Card */}
                     <Card>
@@ -754,6 +834,35 @@ export default function SimpleSolarCalculator() {
                             <div className="p-3 bg-gray-50 rounded text-xs text-gray-600">
                                 <strong>How it works:</strong> Export creates a file you can save anywhere.
                                 Import loads that file on any device. Your existing data stays safe - we only add the imported data.
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Reset Settings */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Reset Settings</CardTitle>
+                            <CardDescription>
+                                Reset all commission settings back to default values if you need to start fresh.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+                                <div>
+                                    <h4 className="font-medium text-orange-900 mb-1">Restore Default Settings</h4>
+                                    <p className="text-sm text-orange-800">
+                                        This will reset commission split, redline price, and all bonus settings to defaults.
+                                        Your sales history will not be affected.
+                                    </p>
+                                </div>
+                                <Button
+                                    onClick={resetToDefaults}
+                                    variant="outline"
+                                    className="flex items-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-100"
+                                >
+                                    <RotateCcw className="h-4 w-4" />
+                                    Reset to Defaults
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>

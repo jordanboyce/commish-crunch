@@ -8,13 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  BarChart3, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Plus, 
-  Edit, 
+import {
+  BarChart3,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Edit,
   Trash2,
   TrendingUp,
   DollarSign
@@ -37,6 +37,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
   });
   const [loading, setLoading] = useState(true);
   const [editingSale, setEditingSale] = useState<SaleRecord | null>(null);
+  const [activeTab, setActiveTab] = useState('sales');
 
   // Form state for adding/editing sales
   const [formData, setFormData] = useState({
@@ -110,6 +111,8 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
         notes: ''
       });
 
+      // Switch back to sales tab after successful save
+      setActiveTab('sales');
       await loadSales();
     } catch (error) {
       console.error('Error saving sale:', error);
@@ -120,14 +123,16 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
     setEditingSale(sale);
     setFormData({
       customerName: sale.customerName,
-      systemSize: (industry === 'solar' ? sale.industryData?.systemSize?.toString() : 
-                   industry === 'lighting' ? sale.industryData?.linearFeet?.toString() : 
-                   sale.industryData?.systemSize?.toString()) || '',
+      systemSize: (industry === 'solar' ? sale.industryData?.systemSize?.toString() :
+        industry === 'lighting' ? sale.industryData?.linearFeet?.toString() :
+          sale.industryData?.systemSize?.toString()) || '',
       saleAmount: sale.saleAmount.toString(),
       commission: sale.commission.toString(),
       status: sale.status,
       notes: sale.notes || ''
     });
+    // Switch to the add/edit tab
+    setActiveTab('add');
   };
 
   const handleDeleteSale = async (id: string) => {
@@ -248,7 +253,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
         </Card>
       </div>
 
-      <Tabs defaultValue="sales" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="sales">Sales History</TabsTrigger>
           <TabsTrigger value="add">Add Sale</TabsTrigger>
@@ -306,7 +311,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                       <div className="flex gap-2 pt-2">
                         <Select
                           value={sale.status}
-                          onValueChange={(status: SaleRecord['status']) => 
+                          onValueChange={(status: SaleRecord['status']) =>
                             handleStatusChange(sale.id, status)
                           }
                         >
@@ -369,8 +374,8 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
 
                 <div className="space-y-2">
                   <Label htmlFor="systemSize">
-                    {industry === 'solar' ? 'System Size (kW)' : 
-                     industry === 'lighting' ? 'Linear Feet' : 'System Size'}
+                    {industry === 'solar' ? 'System Size (kW)' :
+                      industry === 'lighting' ? 'Linear Feet' : 'System Size'}
                   </Label>
                   <Input
                     id="systemSize"
@@ -408,7 +413,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(status: SaleRecord['status']) => 
+                    onValueChange={(status: SaleRecord['status']) =>
                       setFormData(prev => ({ ...prev, status }))
                     }
                   >
@@ -439,8 +444,8 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                   {editingSale ? 'Update Sale' : 'Add Sale'}
                 </Button>
                 {editingSale && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setEditingSale(null);
                       setFormData({
@@ -451,6 +456,7 @@ export default function SalesTracker({ industry = 'solar', onAddSale }: SalesTra
                         status: 'pending',
                         notes: ''
                       });
+                      setActiveTab('sales');
                     }}
                   >
                     Cancel

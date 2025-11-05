@@ -39,7 +39,7 @@ export default function Navbar() {
       id: 'pest',
       name: 'Pest Control',
       icon: Bug,
-      available: false,
+      available: true,
       description: 'Pest control service calculator'
     }
   ];

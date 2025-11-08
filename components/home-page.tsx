@@ -38,9 +38,9 @@ export default function HomePage() {
       id: 'pest',
       name: 'Pest Control',
       icon: Bug,
-      available: false,
-      description: 'Calculate commissions for pest control services, recurring contracts, and one-time treatments.',
-      features: ['Service tiers', 'Contract bonuses', 'Recurring revenue', 'Coming soon']
+      available: true,
+      description: 'Calculate pest control commissions using the contract value redline model. Earn percentage of profit above company minimum contract value.',
+      features: ['Redline commission model', 'Contract value pricing', 'Volume bonuses', 'Sales tracking & export']
     }
   ];
 

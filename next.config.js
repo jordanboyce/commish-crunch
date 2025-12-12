@@ -8,6 +8,7 @@ const nextConfig = {
   // Disable server-side features for static export
   experimental: {
     // Remove any experimental features that require server
+    turbopackUseSystemTlsCerts: true
   }
 }
 

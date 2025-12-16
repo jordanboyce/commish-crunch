@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Lightbulb, Calculator, DollarSign, Settings, History, Save, Download, Upload, X, RotateCcw } from 'lucide-react';
 import SalesTracker from './sales-tracker';
+import GoalProgress from './goal-progress';
 import { salesDB, SaleRecord } from '@/lib/sales-db';
 import { settingsDB } from '@/lib/settings-db';
 
@@ -39,6 +40,10 @@ export default function LightingCalculator() {
     const [sharedPercentage, setSharedPercentage] = useState(50);
     const [sharingReason, setSharingReason] = useState('Split with partner');
 
+    // Goal tracking
+    const [monthlyGoal, setMonthlyGoal] = useState(0);
+    const [currentMonthCommission, setCurrentMonthCommission] = useState(0);
+
     const [result, setResult] = useState<{
         totalCommission: number;
         breakdown: CommissionBreakdown[];
@@ -60,6 +65,7 @@ export default function LightingCalculator() {
                     setIsSharedCommission(savedSettings.isSharedCommission || false);
                     setSharedPercentage(savedSettings.sharedPercentage || 50);
                     setSharingReason(savedSettings.sharingReason || 'Split with partner');
+                    setMonthlyGoal(savedSettings.monthlyGoal || 0);
                 }
 
                 // Check if settings reminder was dismissed
@@ -85,7 +91,8 @@ export default function LightingCalculator() {
                 volumeBonusRate,
                 isSharedCommission,
                 sharedPercentage,
-                sharingReason
+                sharingReason,
+                monthlyGoal
             };
             try {
                 await settingsDB.saveSettings('lighting', settings);
@@ -94,8 +101,36 @@ export default function LightingCalculator() {
             }
         };
         saveSettings();
-    }, [baseRate, redlinePrice, hasVolumeBonus, volumeThreshold, volumeBonusRate, isSharedCommission, sharedPercentage, sharingReason]); const
-        calculateCommission = async () => {
+    }, [baseRate, redlinePrice, hasVolumeBonus, volumeThreshold, volumeBonusRate, isSharedCommission, sharedPercentage, sharingReason, monthlyGoal]);
+
+    // Calculate current month commission from completed sales
+    useEffect(() => {
+        const calculateMonthlyCommission = async () => {
+            try {
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                const lightingSales = await salesDB.getSalesByIndustry('lighting');
+
+                const thisMonthCompletedSales = lightingSales.filter(sale => {
+                    const saleDate = new Date(sale.dateCreated);
+                    return saleDate.getMonth() === currentMonth &&
+                        saleDate.getFullYear() === currentYear &&
+                        sale.status === 'completed';
+                });
+
+                const totalCommission = thisMonthCompletedSales.reduce((sum, sale) => sum + sale.commission, 0);
+                setCurrentMonthCommission(totalCommission);
+            } catch (error) {
+                console.error('Error calculating monthly commission:', error);
+            }
+        };
+
+        calculateMonthlyCommission();
+        const interval = setInterval(calculateMonthlyCommission, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const calculateCommission = async () => {
             const feet = parseFloat(linearFeet);
             const pricePerFootNum = parseFloat(pricePerFoot);
 
@@ -366,6 +401,7 @@ export default function LightingCalculator() {
                 setIsSharedCommission(false);
                 setSharedPercentage(50);
                 setSharingReason('Split with partner');
+                setMonthlyGoal(0);
 
                 await settingsDB.saveSettings('lighting', {
                     baseRate: 50,
@@ -375,7 +411,8 @@ export default function LightingCalculator() {
                     volumeBonusRate: 0.5,
                     isSharedCommission: false,
                     sharedPercentage: 50,
-                    sharingReason: 'Split with partner'
+                    sharingReason: 'Split with partner',
+                    monthlyGoal: 0
                 });
 
                 alert('Settings reset to default values successfully!');
@@ -438,6 +475,7 @@ export default function LightingCalculator() {
                             </CardContent>
                         </Card>
                     )}
+
                     {/* Input Card */}
                     <Card>
                         <CardHeader>
@@ -590,7 +628,7 @@ export default function LightingCalculator() {
                                             </span>
                                             <span className={`font-medium ${item.type === 'penalty' || item.type === 'shared' ? 'text-red-600' : 'text-green-600'
                                                 }`}>
-                                                {item.type === 'penalty' || item.type === 'shared' ? '-' : '+'}{formatCurrency(Math.abs(item.amount))}
+                                                {item.type === 'penalty' || item.type === 'shared' ? '-' : '+'}{formatCurrency(item.amount)}
                                             </span>
                                         </div>
                                     ))}
@@ -598,6 +636,13 @@ export default function LightingCalculator() {
                             </CardContent>
                         </Card>
                     )}
+
+                    {/* Goal Progress - Bottom of page */}
+                    <GoalProgress
+                        currentCommission={currentMonthCommission}
+                        monthlyGoal={monthlyGoal}
+                        industryName="Permanent Lighting"
+                    />
                 </TabsContent>
 
                 <TabsContent value="tracker" className="space-y-6">
@@ -605,6 +650,36 @@ export default function LightingCalculator() {
                 </TabsContent>
 
                 <TabsContent value="settings" className="space-y-6">
+                    {/* Goal Settings */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                Monthly Goal Settings
+                                <Badge variant="outline" className="text-xs">
+                                    Auto-saved
+                                </Badge>
+                            </CardTitle>
+                            <CardDescription>Set your monthly commission goal to track progress and stay motivated.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                <Label htmlFor="monthlyGoal">Monthly Commission Goal ($)</Label>
+                                <Input
+                                    id="monthlyGoal"
+                                    type="number"
+                                    step="100"
+                                    min="0"
+                                    placeholder="10000"
+                                    value={monthlyGoal || ''}
+                                    onChange={(e) => setMonthlyGoal(parseFloat(e.target.value) || 0)}
+                                />
+                                <p className="text-xs text-gray-500">
+                                    Set a monthly commission goal to see your progress on the Calculator tab. Leave at $0 to disable goal tracking.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Pricing Settings */}
                     <Card>
                         <CardHeader>

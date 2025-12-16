@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Bug, Calculator, DollarSign, Settings, History, Save, Download, Upload, X, RotateCcw } from 'lucide-react';
+import { Briefcase, Calculator, DollarSign, Settings, History, Save, Download, Upload, X, RotateCcw } from 'lucide-react';
 import SalesTracker from './sales-tracker';
 import GoalProgress from './goal-progress';
 import { salesDB, SaleRecord } from '@/lib/sales-db';
@@ -20,14 +20,14 @@ interface CommissionBreakdown {
     type: 'base' | 'bonus' | 'penalty' | 'shared';
 }
 
-export default function PestCalculator() {
-    const [contractValue, setContractValue] = useState('');
+export default function GenericCalculator() {
+    const [saleAmount, setSaleAmount] = useState('');
     const [customerName, setCustomerName] = useState('');
     const [showSettingsReminder, setShowSettingsReminder] = useState(false);
 
     // Company settings with IndexedDB persistence
     const [baseRate, setBaseRate] = useState(50); // 50% split
-    const [redlinePrice, setRedlinePrice] = useState(500.00); // $500 minimum contract
+    const [redlinePrice, setRedlinePrice] = useState(1000.00); // $1000 minimum sale
 
     // Volume bonus settings
     const [hasVolumeBonus, setHasVolumeBonus] = useState(false);
@@ -46,7 +46,7 @@ export default function PestCalculator() {
     const [result, setResult] = useState<{
         totalCommission: number;
         breakdown: CommissionBreakdown[];
-        contractValue: number;
+        saleAmount: number;
         grossCommission: number;
     } | null>(null);
 
@@ -54,10 +54,10 @@ export default function PestCalculator() {
     useEffect(() => {
         const loadSettings = async () => {
             try {
-                const savedSettings = await settingsDB.getSettings('pest');
+                const savedSettings = await settingsDB.getSettings('generic');
                 if (savedSettings) {
                     setBaseRate(savedSettings.baseRate || 50);
-                    setRedlinePrice(savedSettings.redlinePrice || 500.00);
+                    setRedlinePrice(savedSettings.redlinePrice || 1000.00);
                     setHasVolumeBonus(savedSettings.hasVolumeBonus || false);
                     setVolumeThreshold(savedSettings.volumeThreshold || 10);
                     setVolumeBonusRate(savedSettings.volumeBonusRate || 0.5);
@@ -68,7 +68,7 @@ export default function PestCalculator() {
                 }
 
                 // Check if settings reminder was dismissed
-                const reminderDismissed = localStorage.getItem('pestSettingsReminderDismissed');
+                const reminderDismissed = localStorage.getItem('genericSettingsReminderDismissed');
                 if (!reminderDismissed && !savedSettings) {
                     setShowSettingsReminder(true);
                 }
@@ -94,7 +94,7 @@ export default function PestCalculator() {
                 monthlyGoal
             };
             try {
-                await settingsDB.saveSettings('pest', settings);
+                await settingsDB.saveSettings('generic', settings);
             } catch (error) {
                 console.error('Error saving settings:', error);
             }
@@ -108,9 +108,9 @@ export default function PestCalculator() {
             try {
                 const currentMonth = new Date().getMonth();
                 const currentYear = new Date().getFullYear();
-                const pestSales = await salesDB.getSalesByIndustry('pest');
+                const genericSales = await salesDB.getSalesByIndustry('generic');
 
-                const thisMonthCompletedSales = pestSales.filter(sale => {
+                const thisMonthCompletedSales = genericSales.filter(sale => {
                     const saleDate = new Date(sale.dateCreated);
                     return saleDate.getMonth() === currentMonth &&
                         saleDate.getFullYear() === currentYear &&
@@ -130,14 +130,14 @@ export default function PestCalculator() {
     }, []);
 
     const calculateCommission = async () => {
-        const contractVal = parseFloat(contractValue);
+        const saleVal = parseFloat(saleAmount);
 
-        if (!contractVal) return;
+        if (!saleVal) return;
 
         const breakdown: CommissionBreakdown[] = [];
 
         // Check if sale is above redline
-        if (contractVal <= redlinePrice) {
+        if (saleVal <= redlinePrice) {
             breakdown.push({
                 label: 'Below Redline - No Commission',
                 amount: 0,
@@ -147,14 +147,14 @@ export default function PestCalculator() {
             setResult({
                 totalCommission: 0,
                 breakdown,
-                contractValue: contractVal,
+                saleAmount: saleVal,
                 grossCommission: 0
             });
             return;
         }
 
         // Calculate commission on amount above redline
-        const aboveRedlineAmount = contractVal - redlinePrice;
+        const aboveRedlineAmount = saleVal - redlinePrice;
         const commission = aboveRedlineAmount * (baseRate / 100);
 
         breakdown.push({
@@ -164,7 +164,7 @@ export default function PestCalculator() {
         });
 
         breakdown.push({
-            label: `Above Redline (${baseRate}% of $${aboveRedlineAmount.toFixed(0)})`,
+            label: `Above Redline (${baseRate}% of ${formatCurrency(aboveRedlineAmount)})`,
             amount: commission,
             type: 'bonus'
         });
@@ -176,9 +176,9 @@ export default function PestCalculator() {
             try {
                 const currentMonth = new Date().getMonth();
                 const currentYear = new Date().getFullYear();
-                const pestSales = await salesDB.getSalesByIndustry('pest');
+                const genericSales = await salesDB.getSalesByIndustry('generic');
 
-                const thisMonthSales = pestSales.filter(sale => {
+                const thisMonthSales = genericSales.filter(sale => {
                     const saleDate = new Date(sale.dateCreated);
                     return saleDate.getMonth() === currentMonth &&
                         saleDate.getFullYear() === currentYear &&
@@ -214,24 +214,24 @@ export default function PestCalculator() {
         setResult({
             totalCommission: Math.max(0, finalCommission),
             breakdown,
-            contractValue: contractVal,
+            saleAmount: saleVal,
             grossCommission: totalCommission
         });
     };
 
     const handleSaveSale = async () => {
-        if (!result || !contractValue) return;
+        if (!result || !saleAmount) return;
 
         try {
             const saleData: Omit<SaleRecord, 'id' | 'dateCreated'> = {
-                industry: 'pest',
+                industry: 'generic',
                 customerName: customerName || 'Unknown Customer',
-                saleAmount: result.contractValue,
+                saleAmount: result.saleAmount,
                 commission: result.totalCommission,
                 status: 'pending',
                 notes: `Commission breakdown: ${result.breakdown.map(b => `${b.label}: ${formatCurrency(b.amount)}`).join(', ')}`,
                 industryData: {
-                    contractValue: parseFloat(contractValue),
+                    saleAmount: parseFloat(saleAmount),
                     baseRate,
                     redlinePrice,
                     hasVolumeBonus,
@@ -243,7 +243,7 @@ export default function PestCalculator() {
             await salesDB.addSale(saleData);
 
             // Reset form
-            setContractValue('');
+            setSaleAmount('');
             setCustomerName('');
             setResult(null);
 
@@ -262,27 +262,27 @@ export default function PestCalculator() {
     };
 
     const getPriceStatus = () => {
-        const contractVal = parseFloat(contractValue);
-        if (contractVal < redlinePrice) return { color: 'red', text: 'Below Redline' };
+        const saleVal = parseFloat(saleAmount);
+        if (saleVal < redlinePrice) return { color: 'red', text: 'Below Redline' };
         return { color: 'green', text: 'Good Price' };
     };
 
     const dismissSettingsReminder = () => {
         setShowSettingsReminder(false);
-        localStorage.setItem('pestSettingsReminderDismissed', 'true');
+        localStorage.setItem('genericSettingsReminderDismissed', 'true');
     };
 
     const handleExportData = async () => {
         try {
-            // Get all pest settings and sales
+            // Get all generic settings and sales
             const [settings, sales] = await Promise.all([
-                settingsDB.getSettings('pest'),
-                salesDB.getSalesByIndustry('pest')
+                settingsDB.getSettings('generic'),
+                salesDB.getSalesByIndustry('generic')
             ]);
 
             const exportData = {
                 version: '1.0',
-                industry: 'pest',
+                industry: 'generic',
                 exportDate: new Date().toISOString(),
                 settings: settings || {},
                 sales: sales || []
@@ -293,7 +293,7 @@ export default function PestCalculator() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `commishcrunch-pest-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `commishcrunch-generic-backup-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -315,8 +315,8 @@ export default function PestCalculator() {
             const importData = JSON.parse(text);
 
             // Validate the import data
-            if (!importData.version || !importData.industry || importData.industry !== 'pest') {
-                alert('Invalid backup file. Please select a valid CommishCrunch pest control backup file.');
+            if (!importData.version || !importData.industry || importData.industry !== 'generic') {
+                alert('Invalid backup file. Please select a valid CommishCrunch generic sales backup file.');
                 return;
             }
 
@@ -333,7 +333,7 @@ export default function PestCalculator() {
 
             // Import settings
             if (importData.settings) {
-                await settingsDB.saveSettings('pest', importData.settings);
+                await settingsDB.saveSettings('generic', importData.settings);
 
                 // Update current state with imported settings
                 setBaseRate(importData.settings.baseRate || baseRate);
@@ -351,7 +351,7 @@ export default function PestCalculator() {
                 for (const sale of importData.sales) {
                     // Add each sale (will create new IDs)
                     await salesDB.addSale({
-                        industry: 'pest',
+                        industry: 'generic',
                         customerName: sale.customerName,
                         saleAmount: sale.saleAmount,
                         commission: sale.commission,
@@ -378,7 +378,7 @@ export default function PestCalculator() {
             'Reset all settings to default values?\n\n' +
             'This will restore:\n' +
             '• Commission Split: 50%\n' +
-            '• Redline Price: $500.00\n' +
+            '• Redline Price: $1,000.00\n' +
             '• Volume Bonus: Disabled\n' +
             '• Commission Sharing: Disabled\n\n' +
             'Your sales history will not be affected.'
@@ -387,7 +387,7 @@ export default function PestCalculator() {
         if (confirmReset) {
             try {
                 setBaseRate(50);
-                setRedlinePrice(500.00);
+                setRedlinePrice(1000.00);
                 setHasVolumeBonus(false);
                 setVolumeThreshold(10);
                 setVolumeBonusRate(0.5);
@@ -396,9 +396,9 @@ export default function PestCalculator() {
                 setSharingReason('Split with partner');
                 setMonthlyGoal(0);
 
-                await settingsDB.saveSettings('pest', {
+                await settingsDB.saveSettings('generic', {
                     baseRate: 50,
-                    redlinePrice: 500.00,
+                    redlinePrice: 1000.00,
                     hasVolumeBonus: false,
                     volumeThreshold: 10,
                     volumeBonusRate: 0.5,
@@ -420,10 +420,10 @@ export default function PestCalculator() {
         <div className="mx-auto max-w-4xl space-y-6">
             <div className="text-center">
                 <div className="flex items-center justify-center gap-3 mb-4">
-                    <Bug className="h-8 w-8 text-green-600" />
-                    <h1 className="text-3xl font-bold text-gray-900">Pest Control Calculator</h1>
+                    <Briefcase className="h-8 w-8 text-blue-600" />
+                    <h1 className="text-3xl font-bold text-gray-900">Generic Sales Calculator</h1>
                 </div>
-                <p className="text-gray-600">Calculate your pest control commission with precision</p>
+                <p className="text-gray-600">Calculate your sales commission for any industry</p>
             </div>
 
             <Tabs defaultValue="calculator" className="w-full">
@@ -474,10 +474,10 @@ export default function PestCalculator() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Calculator className="h-5 w-5" />
-                                Contract Details
+                                Sale Details
                             </CardTitle>
                             <CardDescription>
-                                Enter your pest control service contract information
+                                Enter your sale information
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -493,26 +493,26 @@ export default function PestCalculator() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="contractValue">Annual Contract Value ($)</Label>
+                                    <Label htmlFor="saleAmount">Sale Amount ($)</Label>
                                     <Input
-                                        id="contractValue"
+                                        id="saleAmount"
                                         type="number"
                                         step="0.01"
-                                        placeholder="1200.00"
-                                        value={contractValue}
-                                        onChange={(e) => setContractValue(e.target.value)}
+                                        placeholder="5000.00"
+                                        value={saleAmount}
+                                        onChange={(e) => setSaleAmount(e.target.value)}
                                         className="text-lg"
                                     />
                                 </div>
                             </div>
 
-                            {/* Contract info display */}
-                            {contractValue && (
+                            {/* Sale info display */}
+                            {saleAmount && (
                                 <div className="p-4 bg-gray-50 rounded-lg space-y-2">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">Contract Value:</span>
+                                        <span className="text-sm text-gray-600">Sale Amount:</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-medium">{formatCurrency(parseFloat(contractValue))}</span>
+                                            <span className="font-medium">{formatCurrency(parseFloat(saleAmount))}</span>
                                             <Badge variant={
                                                 getPriceStatus().color === 'green' ? 'default' :
                                                     getPriceStatus().color === 'red' ? 'destructive' : 'secondary'
@@ -528,7 +528,7 @@ export default function PestCalculator() {
                                 <Button
                                     onClick={calculateCommission}
                                     className="flex-1"
-                                    disabled={!contractValue}
+                                    disabled={!saleAmount}
                                 >
                                     Calculate Commission
                                 </Button>
@@ -573,8 +573,8 @@ export default function PestCalculator() {
                                 {/* Sale Summary */}
                                 <div className="p-4 bg-white rounded-lg space-y-2">
                                     <div className="flex justify-between">
-                                        <span className="text-gray-600">Contract Value:</span>
-                                        <span className="font-medium">{formatCurrency(result.contractValue)}</span>
+                                        <span className="text-gray-600">Sale Amount:</span>
+                                        <span className="font-medium">{formatCurrency(result.saleAmount)}</span>
                                     </div>
                                 </div>
 
@@ -607,12 +607,12 @@ export default function PestCalculator() {
                     <GoalProgress
                         currentCommission={currentMonthCommission}
                         monthlyGoal={monthlyGoal}
-                        industryName="Pest Control"
+                        industryName="Generic Sales"
                     />
                 </TabsContent>
 
                 <TabsContent value="tracker" className="space-y-6">
-                    <SalesTracker industry="pest" />
+                    <SalesTracker industry="generic" />
                 </TabsContent>
 
                 <TabsContent value="settings" className="space-y-6">
@@ -684,7 +684,7 @@ export default function PestCalculator() {
                                         onChange={(e) => setRedlinePrice(parseFloat(e.target.value) || 0)}
                                     />
                                     <p className="text-xs text-gray-500">
-                                        Company's minimum contract value. You earn commission only on amount above this.
+                                        Company's minimum sale amount. You earn commission only on amount above this.
                                     </p>
                                 </div>
                             </div>
@@ -787,7 +787,7 @@ export default function PestCalculator() {
                                             <Input
                                                 id="sharingReason"
                                                 type="text"
-                                                placeholder="e.g., Split with setter"
+                                                placeholder="e.g., Split with partner"
                                                 value={sharingReason}
                                                 onChange={(e) => setSharingReason(e.target.value)}
                                             />

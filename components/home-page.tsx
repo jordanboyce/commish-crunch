@@ -8,6 +8,7 @@ import {
   Sun,
   Lightbulb,
   Bug,
+  Briefcase,
   Calculator,
   Zap,
   Heart,
@@ -41,6 +42,14 @@ export default function HomePage() {
       available: true,
       description: 'Calculate pest control commissions using the contract value redline model. Earn percentage of profit above company minimum contract value.',
       features: ['Redline commission model', 'Contract value pricing', 'Volume bonuses', 'Sales tracking & export']
+    },
+    {
+      id: 'generic',
+      name: 'Generic Sales',
+      icon: Briefcase,
+      available: true,
+      description: 'Calculate commissions for any industry using the flexible redline model. Perfect for salespeople in any field not covered by our specialized calculators.',
+      features: ['Redline commission model', 'Simple sale amount input', 'Volume bonuses', 'Sales tracking & export']
     }
   ];
 

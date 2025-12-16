@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Sun, Calculator, DollarSign, Settings, History, Save, Download, Upload, X, RotateCcw } from 'lucide-react';
 import SalesTracker from './sales-tracker';
+import GoalProgress from './goal-progress';
 import { salesDB, SaleRecord } from '@/lib/sales-db';
 import { settingsDB } from '@/lib/settings-db';
 
@@ -40,10 +41,14 @@ export default function SimpleSolarCalculator() {
     const [sharedPercentage, setSharedPercentage] = useState(50);
     const [sharingReason, setSharingReason] = useState('Split with setter');
 
+    // Goal tracking
+    const [monthlyGoal, setMonthlyGoal] = useState(0);
+    const [currentMonthCommission, setCurrentMonthCommission] = useState(0);
+
     const [result, setResult] = useState<{
         totalCommission: number;
         breakdown: CommissionBreakdown[];
-        pricePerKw: number;
+        pricePerWatt: number;
         saleAmount: number;
         grossCommission: number;
     } | null>(null);
@@ -62,12 +67,13 @@ export default function SimpleSolarCalculator() {
                     setIsSharedCommission(savedSettings.isSharedCommission || false);
                     setSharedPercentage(savedSettings.sharedPercentage || 50);
                     setSharingReason(savedSettings.sharingReason || 'Split with partner');
+                    setMonthlyGoal(savedSettings.monthlyGoal || 0);
                 }
 
                 // Check if settings reminder should be shown
                 // Check if settings reminder was dismissed
                 const reminderDismissed = localStorage.getItem('solarSettingsReminderDismissed');
-                if (!reminderDismissed) {
+                if (!reminderDismissed && !savedSettings) {
                     setShowSettingsReminder(true);
                 }
             } catch (error) {
@@ -88,7 +94,8 @@ export default function SimpleSolarCalculator() {
                 volumeBonusRate,
                 isSharedCommission,
                 sharedPercentage,
-                sharingReason
+                sharingReason,
+                monthlyGoal
             };
             try {
                 await settingsDB.saveSettings('solar', settings);
@@ -97,7 +104,35 @@ export default function SimpleSolarCalculator() {
             }
         };
         saveSettings();
-    }, [baseRate, redlinePrice, hasVolumeBonus, volumeThreshold, volumeBonusRate, isSharedCommission, sharedPercentage, sharingReason]);
+    }, [baseRate, redlinePrice, hasVolumeBonus, volumeThreshold, volumeBonusRate, isSharedCommission, sharedPercentage, sharingReason, monthlyGoal]);
+
+    // Calculate current month commission from completed sales
+    useEffect(() => {
+        const calculateMonthlyCommission = async () => {
+            try {
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                const solarSales = await salesDB.getSalesByIndustry('solar');
+
+                const thisMonthCompletedSales = solarSales.filter(sale => {
+                    const saleDate = new Date(sale.dateCreated);
+                    return saleDate.getMonth() === currentMonth &&
+                        saleDate.getFullYear() === currentYear &&
+                        sale.status === 'completed';
+                });
+
+                const totalCommission = thisMonthCompletedSales.reduce((sum, sale) => sum + sale.commission, 0);
+                setCurrentMonthCommission(totalCommission);
+            } catch (error) {
+                console.error('Error calculating monthly commission:', error);
+            }
+        };
+
+        calculateMonthlyCommission();
+        // Recalculate when navigating back to this component
+        const interval = setInterval(calculateMonthlyCommission, 10000); // Update every 10 seconds
+        return () => clearInterval(interval);
+    }, []);
 
     const calculateCommission = async () => {
         const size = parseFloat(systemSize);
@@ -120,7 +155,7 @@ export default function SimpleSolarCalculator() {
             setResult({
                 totalCommission: 0,
                 breakdown,
-                pricePerKw: pricePerWattNum,
+                pricePerWatt: pricePerWattNum,
                 saleAmount,
                 grossCommission: 0
             });
@@ -195,7 +230,7 @@ export default function SimpleSolarCalculator() {
         setResult({
             totalCommission: Math.max(0, finalCommission),
             breakdown,
-            pricePerKw: pricePerWattNum,
+            pricePerWatt: pricePerWattNum,
             saleAmount,
             grossCommission: totalCommission
         });
@@ -278,6 +313,7 @@ export default function SimpleSolarCalculator() {
                 setIsSharedCommission(false);
                 setSharedPercentage(50);
                 setSharingReason('Split with partner');
+                setMonthlyGoal(0);
 
                 // Clear settings from IndexedDB (will be re-saved with defaults)
                 await settingsDB.saveSettings('solar', {
@@ -288,7 +324,8 @@ export default function SimpleSolarCalculator() {
                     volumeBonusRate: 0.5,
                     isSharedCommission: false,
                     sharedPercentage: 50,
-                    sharingReason: 'Split with partner'
+                    sharingReason: 'Split with partner',
+                    monthlyGoal: 0
                 });
 
                 alert('Settings reset to default values successfully!');
@@ -589,7 +626,7 @@ export default function SimpleSolarCalculator() {
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Price per Watt:</span>
-                                        <span className="font-medium">${result.pricePerKw.toFixed(2)}</span>
+                                        <span className="font-medium">${result.pricePerWatt.toFixed(2)}/W</span>
                                     </div>
                                 </div>
 
@@ -617,6 +654,13 @@ export default function SimpleSolarCalculator() {
                             </CardContent>
                         </Card>
                     )}
+
+                    {/* Goal Progress - Bottom of page */}
+                    <GoalProgress
+                        currentCommission={currentMonthCommission}
+                        monthlyGoal={monthlyGoal}
+                        industryName="Solar Sales"
+                    />
                 </TabsContent>
 
                 <TabsContent value="tracker" className="space-y-6">
@@ -624,7 +668,35 @@ export default function SimpleSolarCalculator() {
                 </TabsContent>
 
                 <TabsContent value="settings" className="space-y-6">
-
+                    {/* Goal Settings */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                Monthly Goal Settings
+                                <Badge variant="outline" className="text-xs">
+                                    Auto-saved
+                                </Badge>
+                            </CardTitle>
+                            <CardDescription>Set your monthly commission goal to track progress and stay motivated.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2">
+                                <Label htmlFor="monthlyGoal">Monthly Commission Goal ($)</Label>
+                                <Input
+                                    id="monthlyGoal"
+                                    type="number"
+                                    step="100"
+                                    min="0"
+                                    placeholder="10000"
+                                    value={monthlyGoal || ''}
+                                    onChange={(e) => setMonthlyGoal(parseFloat(e.target.value) || 0)}
+                                />
+                                <p className="text-xs text-gray-500">
+                                    Set a monthly commission goal to see your progress on the Calculator tab. Leave at $0 to disable goal tracking.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
 
                     {/* Pricing Settings */}
                     <Card>

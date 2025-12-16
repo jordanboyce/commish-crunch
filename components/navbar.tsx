@@ -7,6 +7,7 @@ import {
   Sun,
   Lightbulb,
   Bug,
+  Briefcase,
   Calculator
 } from 'lucide-react';
 
@@ -41,6 +42,13 @@ export default function Navbar() {
       icon: Bug,
       available: true,
       description: 'Pest control service calculator'
+    },
+    {
+      id: 'generic',
+      name: 'Generic Sales',
+      icon: Briefcase,
+      available: true,
+      description: 'Generic sales commission calculator'
     }
   ];
 
@@ -49,6 +57,7 @@ export default function Navbar() {
     if (pathname === '/solar' || pathname === '/solar/') return 'solar';
     if (pathname === '/lighting' || pathname === '/lighting/') return 'lighting';
     if (pathname === '/pest' || pathname === '/pest/') return 'pest';
+    if (pathname === '/generic' || pathname === '/generic/') return 'generic';
     return 'home';
   };
 

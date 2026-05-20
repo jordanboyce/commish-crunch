@@ -13,6 +13,7 @@ export interface SaleRecord {
 }
 
 class SalesDB {
+  [x: string]: any;
   private dbName = 'SolarSalesDB';
   private version = 1;
   private db: IDBDatabase | null = null;

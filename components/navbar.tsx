@@ -8,7 +8,8 @@ import {
   Lightbulb,
   Bug,
   Briefcase,
-  Calculator
+  Calculator,
+  Landmark
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -44,6 +45,13 @@ export default function Navbar() {
       description: 'Pest control service calculator'
     },
     {
+      id: 'financial',
+      name: 'Financial Advisor',
+      icon: Landmark,
+      available: true,
+      description: 'AUM and flat fee commission calculator'
+    },
+    {
       id: 'generic',
       name: 'Generic Sales',
       icon: Briefcase,
@@ -57,6 +65,7 @@ export default function Navbar() {
     if (pathname === '/solar' || pathname === '/solar/') return 'solar';
     if (pathname === '/lighting' || pathname === '/lighting/') return 'lighting';
     if (pathname === '/pest' || pathname === '/pest/') return 'pest';
+    if (pathname === '/financial' || pathname === '/financial/') return 'financial';
     if (pathname === '/generic' || pathname === '/generic/') return 'generic';
     return 'home';
   };

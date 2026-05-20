@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,9 +16,36 @@ import {
   Shield,
   Clock
 } from 'lucide-react';
+import { salesDB, SaleRecord } from '@/lib/sales-db';
+import Dashboard from '@/components/dashboard';
 
 export default function HomePage() {
   const router = useRouter();
+  const [sales, setSales] = useState<SaleRecord[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    salesDB
+      .getAllSales()
+      .then((all) => {
+        if (!cancelled) setSales(all);
+      })
+      .catch(() => {
+        if (!cancelled) setSales([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (sales === null) {
+    return <div className="max-w-6xl mx-auto p-8 text-center text-gray-500">Loading…</div>;
+  }
+
+  if (sales.length > 0) {
+    return <Dashboard sales={sales} />;
+  }
+
   const calculators = [
     {
       id: 'solar',
